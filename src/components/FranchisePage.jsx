@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 /**
  * Cache utility functions for RAWG API responses
  * Provides persistent caching to reduce API calls and improve performance
+ * Updated: Force deployment trigger
  */
 const cacheUtils = {
   /**
