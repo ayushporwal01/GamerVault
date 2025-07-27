@@ -1021,6 +1021,7 @@ const fetchFranchiseGames = async () => {
                         src={game.background_image || "/fallback.jpg"}
                         onError={(e) => (e.target.src = "/fallback.jpg")}
                         alt={game.name}
+                        loading="lazy"
                         className="w-12 h-9 sm:w-16 sm:h-12 object-cover rounded flex-shrink-0"
                       />
                       
@@ -1077,6 +1078,7 @@ const fetchFranchiseGames = async () => {
             src={localCard?.image || gameData?.image || "/fallback.jpg"}
             onError={(e) => (e.target.src = "/fallback.jpg")}
             alt={gameData?.name}
+            loading="lazy"
             className="w-full lg:w-[300px] xl:w-[400px] h-48 sm:h-60 lg:h-72 object-cover rounded-xl flex-shrink-0"
           />
           <div className="flex flex-col space-y-3 sm:space-y-4 lg:space-y-5 w-full">
@@ -1152,6 +1154,7 @@ const fetchFranchiseGames = async () => {
                   src={game.background_image || "/fallback.jpg"}
                   onError={(e) => (e.target.src = "/fallback.jpg")}
                   alt={game.name}
+                  loading="lazy"
                   className="w-full sm:w-36 md:w-48 h-20 sm:h-24 md:h-28 object-cover rounded-lg flex-shrink-0"
                 />
                 <div className="flex flex-col justify-between flex-1 min-w-0">

@@ -232,6 +232,7 @@ const Rank = () => {
                               src={game.image || '/fallback.jpg'}
                               onError={(e) => (e.target.src = '/fallback.jpg')}
                               alt={game.text}
+                              loading="lazy"
                               className="w-10 h-10 object-cover rounded-full"
                             />
                             
