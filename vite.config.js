@@ -4,4 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    target: "esnext",
+    outDir: "dist", // this is the default, but explicit is better
+  },
+  base: "/", // ensures assets resolve properly
 });
