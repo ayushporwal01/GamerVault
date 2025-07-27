@@ -743,17 +743,10 @@ const fetchFranchiseGames = async () => {
         
         let cacheKey, apiUrl;
         
-        if (isFranchiseCard) {
-          // For franchise cards, search for all games in the franchise
-          const franchiseSearchTerm = franchiseName.toLowerCase().replace(/\s+/g, '-');
-          cacheKey = cacheUtils.getCacheKey('franchiseSearch', franchiseSearchTerm);
-          apiUrl = `https://api.rawg.io/api/games?search=${encodeURIComponent(franchiseName)}&page_size=40&key=${API_KEY}`;
-        } else {
-          // For game cards, use publisher-based search (original logic)
-          const slugs = gameData.publisherSlugs.join(",");
-          cacheKey = cacheUtils.getCacheKey('franchiseGames', slugs);
-          apiUrl = `https://api.rawg.io/api/games?publishers=${slugs}&page_size=40&key=${API_KEY}`;
-        }
+        // Always use publisher-based search to get games from same franchise
+        const slugs = gameData.publisherSlugs.join(",");
+        cacheKey = cacheUtils.getCacheKey('franchiseGames', `${slugs}_${isFranchiseCard}`);
+        apiUrl = `https://api.rawg.io/api/games?publishers=${slugs}&page_size=40&key=${API_KEY}`;
         
         const cachedData = cacheUtils.getCachedData(cacheKey);
         if (cachedData) {
@@ -827,69 +820,19 @@ const fetchFranchiseGames = async () => {
 
               let matches = false;
               
-              // Determine what the header title actually represents based on RAWG data
-              const headerIsActuallyFranchise = gameData.headerIsFranchise;
-              const headerIsActuallyGame = gameData.headerIsExactGame;
-              
-              if (headerIsActuallyFranchise) {
-                // Header title is a franchise/publisher name
-                if (isFranchiseCard) {
-                  // Show all games from this franchise (both games with franchise name in title and without)
-                  const franchisePublisher = normalize(localCard?.text);
-                  
-                  matches = targetPublishers.some((targetPub) => {
-                    // Check if game's publishers/developers match the franchise publisher
-                    return gameDevNames.some(gameDev => 
-                      gameDev.includes(targetPub) || targetPub.includes(gameDev)
-                    ) || gamePubNames.some(gamePub => 
-                      gamePub.includes(targetPub) || targetPub.includes(gamePub) ||
-                      // Handle comma-separated publisher names
-                      gamePub.split(',').some(subPub => 
-                        normalize(subPub.trim()).includes(franchisePublisher) ||
-                        franchisePublisher.includes(normalize(subPub.trim()))
-                      )
-                    );
-                  }) || 
-                  // Also check if franchise name is in the publisher/developer names directly
-                  gameDevNames.some(dev => 
-                    dev.includes(franchisePublisher) || franchisePublisher.includes(dev)
-                  ) ||
-                  gamePubNames.some(pub => 
-                    pub.includes(franchisePublisher) || franchisePublisher.includes(pub) ||
-                    // Handle comma-separated values in RAWG publisher field
-                    pub.split(',').some(subPub => 
-                      normalize(subPub.trim()).includes(franchisePublisher) ||
-                      franchisePublisher.includes(normalize(subPub.trim()))
-                    )
+              if (isFranchiseCard) {
+                // Franchise mode: Show all games from same publisher/developer
+                matches = targetPublishers.some((targetPub) => {
+                  // Check if game's publishers/developers match
+                  return gameDevNames.some(gameDev => 
+                    gameDev.includes(targetPub) || targetPub.includes(gameDev)
+                  ) || gamePubNames.some(gamePub => 
+                    gamePub.includes(targetPub) || targetPub.includes(gamePub)
                   );
-                } else {
-                  // Show none when switched to game mode for a franchise title
-                  matches = false;
-                }
-              } else if (headerIsActuallyGame) {
-                // Header title is a specific game name
-                if (isFranchiseCard) {
-                  // Show all games from the same publisher/developer as this specific game
-                  const franchisePublisher = normalize(localCard?.text);
-                  
-                  matches = targetPublishers.some((targetPub) => {
-                    return gameDevNames.some(gameDev => 
-                      gameDev.includes(targetPub) || targetPub.includes(gameDev)
-                    ) || gamePubNames.some(gamePub => 
-                      gamePub.includes(targetPub) || targetPub.includes(gamePub)
-                    );
-                  });
-                } else {
-                  // Show only the exact game that matches the header title
-                  matches = exactNameMatch;
-                }
+                });
               } else {
-                // Fallback: use previous logic if we can't determine the type
-                if (isFranchiseCard) {
-                  matches = includesSubstring || includesAllWords;
-                } else {
-                  matches = exactNameMatch;
-                }
+                // Game mode: Show only exact game name matches (and remove duplicates)
+                matches = exactNameMatch;
               }
 
               return matches
