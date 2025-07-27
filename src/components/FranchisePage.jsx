@@ -1011,6 +1011,24 @@ const fetchFranchiseGames = async () => {
                 </div>
               ) : (
                 franchiseGames
+                  .filter((game) => {
+                    // Filter out games without store links
+                    if (!game.stores || game.stores.length === 0) {
+                      // Special case: Allow Minecraft even without store data since it has hardcoded link
+                      return game.name?.toLowerCase().includes('minecraft');
+                    }
+                    // Check if game has any valid store links
+                    const hasValidStores = game.stores.some(store => {
+                      if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url) {
+                        return true;
+                      }
+                      if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url) {
+                        return true;
+                      }
+                      return false;
+                    });
+                    return hasValidStores;
+                  })
                   .sort((a, b) => new Date(b.released) - new Date(a.released))
                   .map((game) => (
                     <div
@@ -1144,6 +1162,24 @@ const fetchFranchiseGames = async () => {
           </p>
         ) : (
           franchiseGames
+            .filter((game) => {
+              // Filter out games without store links
+              if (!game.stores || game.stores.length === 0) {
+                // Special case: Allow Minecraft even without store data since it has hardcoded link
+                return game.name?.toLowerCase().includes('minecraft');
+              }
+              // Check if game has any valid store links
+              const hasValidStores = game.stores.some(store => {
+                if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url) {
+                  return true;
+                }
+                if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url) {
+                  return true;
+                }
+                return false;
+              });
+              return hasValidStores;
+            })
             .sort((a, b) => new Date(b.released) - new Date(a.released))
             .map((game) => (
               <div
