@@ -1,0 +1,113 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-primary: "Billboard", sans-serif; /* Set your Billboard font here */
+  --font-melody: "Inter", "Melody Variable", sans-serif; /* Use Inter as Melody Variable font fallback */
+}
+
+/* Super smooth scrolling for all components */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Account for fixed header */
+}
+
+body {
+  @apply scroll-smooth;
+  /* Enhanced smooth scrolling with better momentum */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: smooth;
+}
+
+/* Apply smooth scrolling to all scrollable containers */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Smooth scrolling for specific scrollable elements */
+.scrollable,
+[data-scrollable="true"],
+div[class*="overflow-y-auto"],
+div[class*="overflow-auto"],
+div[class*="overflow-scroll"] {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Enhanced momentum scrolling */
+  scroll-snap-type: y proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Custom scrollbar styling for Webkit browsers */
+.scrollable::-webkit-scrollbar,
+[data-scrollable="true"]::-webkit-scrollbar,
+div[class*="overflow-y-auto"]::-webkit-scrollbar,
+div[class*="overflow-auto"]::-webkit-scrollbar,
+div[class*="overflow-scroll"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollable::-webkit-scrollbar-track,
+[data-scrollable="true"]::-webkit-scrollbar-track,
+div[class*="overflow-y-auto"]::-webkit-scrollbar-track,
+div[class*="overflow-auto"]::-webkit-scrollbar-track,
+div[class*="overflow-scroll"]::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollable::-webkit-scrollbar-thumb,
+[data-scrollable="true"]::-webkit-scrollbar-thumb,
+div[class*="overflow-y-auto"]::-webkit-scrollbar-thumb,
+div[class*="overflow-auto"]::-webkit-scrollbar-thumb,
+div[class*="overflow-scroll"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover,
+[data-scrollable="true"]::-webkit-scrollbar-thumb:hover,
+div[class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover,
+div[class*="overflow-auto"]::-webkit-scrollbar-thumb:hover,
+div[class*="overflow-scroll"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Ultra smooth scrolling utility class */
+.ultra-smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: smooth;
+  scroll-padding: 1rem;
+  /* Prevent scroll chaining */
+  overscroll-behavior-y: contain;
+  /* Better scroll momentum on iOS */
+  -webkit-scroll-snap-type: y mandatory;
+  -ms-scroll-snap-type: y mandatory;
+  scroll-snap-type: y mandatory;
+}
+
+/* Update cursor styles */
+button {
+  cursor: pointer;
+}
+.card {
+  cursor: grab;
+}
+
+/* Hide number input spinners for Chrome, Safari, Edge */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide number input spinners for Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
