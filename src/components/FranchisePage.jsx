@@ -1011,12 +1011,6 @@ const fetchFranchiseGames = async () => {
                 </div>
               ) : (
                 franchiseGames
-                  .filter((game) => {
-                    const hasSteam = game.stores?.some((s) => s.store?.name === "Steam" || s.store_id === 1);
-                    const hasEpic = game.stores?.some((s) => s.store?.name === "Epic Games" || s.store_id === 11);
-                    const isMinecraft = game.name?.toLowerCase().includes("minecraft");
-                    return hasSteam || hasEpic || isMinecraft;
-                  })
                   .sort((a, b) => new Date(b.released) - new Date(a.released))
                   .map((game) => (
                     <div
@@ -1148,14 +1142,6 @@ const fetchFranchiseGames = async () => {
           </p>
         ) : (
           franchiseGames
-            .filter((game) => {
-              // Check if the game has any available store links
-              const hasSteam = game.stores?.some((s) => s.store?.name === "Steam" || s.store_id === 1);
-              const hasEpic = game.stores?.some((s) => s.store?.name === "Epic Games" || s.store_id === 11);
-              const isMinecraft = game.name?.toLowerCase().includes("minecraft");
-              
-              return hasSteam || hasEpic || isMinecraft;
-            })
             .sort((a, b) => new Date(b.released) - new Date(a.released))
             .map((game) => (
               <div
