@@ -9,34 +9,34 @@ import { useMemo } from 'react';
  * @param {string} game.name - Game name for special case handling
  */
 const GameLinks = ({ game }) => {
-  // Store configuration with IDs and styling
-  const storeConfig = {
-    steam: {
-      id: 1,
-      name: 'Steam',
-      className: 'text-sm text-blue-400 underline hover:text-blue-300 transition-colors',
-      matcher: (store) => store.store?.name === 'Steam' || store.store_id === 1,
-      urlProcessor: (url) => {
-        // Handle relative Steam URLs
-        if (url?.startsWith('/') || url?.startsWith('app/')) {
-          return `https://store.steampowered.com${url}`;
-        }
-        return url;
-      },
-    },
-    epic: {
-      id: 11,
-      name: 'Epic Games',
-      className: 'text-sm text-blue-400 underline hover:text-blue-300 transition-colors',
-      matcher: (store) => store.store?.name === 'Epic Games' || store.store_id === 11,
-      urlProcessor: (url) => url,
-    },
-  };
-
   /**
    * Generate store links based on available stores
    */
   const storeLinks = useMemo(() => {
+    // Store configuration with IDs and styling
+    const storeConfig = {
+      steam: {
+        id: 1,
+        name: 'Steam',
+        className: 'text-sm text-blue-400 underline hover:text-blue-300 transition-colors',
+        matcher: (store) => store.store?.name === 'Steam' || store.store_id === 1,
+        urlProcessor: (url) => {
+          // Handle relative Steam URLs
+          if (url?.startsWith('/') || url?.startsWith('app/')) {
+            return `https://store.steampowered.com${url}`;
+          }
+          return url;
+        },
+      },
+      epic: {
+        id: 11,
+        name: 'Epic Games',
+        className: 'text-sm text-blue-400 underline hover:text-blue-300 transition-colors',
+        matcher: (store) => store.store?.name === 'Epic Games' || store.store_id === 11,
+        urlProcessor: (url) => url,
+      },
+    };
+
     const links = [];
 
     // Process configured stores
@@ -56,7 +56,7 @@ const GameLinks = ({ game }) => {
     });
 
     // Special case: Minecraft direct link
-    if (game.name?.toLowerCase().includes('minecraft')) {
+    if (game.name?.toLowerCase() === 'minecraft') {
       links.push({
         key: 'minecraft',
         name: 'Buy Minecraft',

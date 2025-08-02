@@ -53,7 +53,7 @@ const Favorites = () => {
   /**
    * Handle drop event
    */
-  const handleDrop = useCallback((e, overId) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     

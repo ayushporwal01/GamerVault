@@ -9,7 +9,7 @@ import useDebounce from "../utils/useDebounce";
  * Features search filtering, smooth animations, and responsive layout
  */
 const Body = () => {
-  const { cards, setCards, searchInput } = useCards();
+  const { cards, setCards, searchInput, showGames } = useCards();
   const [draggingId, setDraggingId] = useState(null);
   const [filteredCardIds, setFilteredCardIds] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -45,19 +45,29 @@ const Body = () => {
   }, [cards]);
 
   /**
-   * Filter cards based on search input
+   * Filter cards based on search input and showGames toggle
+   * Shows franchise cards when showGames is false, individual game cards when true
    * Only shows cards that are not in any category and not ranking-only (homepage cards only)
-   * Updates whenever search input or cards change
+   * Updates whenever search input, cards, or showGames changes
    */
   useEffect(() => {
     // Filter to only include cards that should appear on homepage (not ranking-only)
-    const homepageCards = cards.filter(card => !card.isRankingOnly);
+    let homepageCards = cards.filter(card => !card.isRankingOnly);
+    
+    // Filter based on showGames toggle
+    if (showGames) {
+      // Show individual game cards (cards without isFranchiseCard flag or isFranchiseCard === false)
+      homepageCards = homepageCards.filter(card => !card.isFranchiseCard);
+    } else {
+      // Show franchise cards (cards with isFranchiseCard === true)
+      homepageCards = homepageCards.filter(card => card.isFranchiseCard === true);
+    }
     
     if (!debouncedSearchInput.trim()) {
-      // Show all homepage cards when no search input
+      // Show all filtered cards when no search input
       setFilteredCardIds(homepageCards.map((card) => card.id));
     } else {
-      // Filter homepage cards by title (case-insensitive)
+      // Filter cards by title (case-insensitive)
       const filtered = homepageCards
         .filter((card) =>
           (card.text || "")
@@ -67,7 +77,7 @@ const Body = () => {
         .map((card) => card.id);
       setFilteredCardIds(filtered);
     }
-  }, [debouncedSearchInput, cards]);
+  }, [debouncedSearchInput, cards, showGames]);
 
   /**
    * Handle drag start event
@@ -115,7 +125,7 @@ const Body = () => {
   /**
    * Handle drop event for reordering cards
    */
-  const handleDrop = useCallback((e, overId) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { IoIosSearch, IoMdClose } from "react-icons/io";
 import { Link } from "react-router-dom";
 import { useCards } from "../utils/CardContext";
+import ToggleSwitch from "./ToggleSwitch";
 
 /**
  * Main navigation header component
@@ -80,6 +81,9 @@ const Header = () => {
                   >
                     <IoIosSearch />
                   </button>
+                </li>
+                <li>
+                  <ToggleSwitch />
                 </li>
               </ul>
             </nav>

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useCards } from "../utils/CardContext";
 import ShimmerCardList from "../utils/ShimmerCardList";
 import GameLinks from "./GameLinks";
 import CardTypeToggle from "./CardTypeToggle";
+import ToggleSwitch from "./ToggleSwitch";
 import { API_KEY, GAMES_ENDPOINT, STORES_ENDPOINT } from "../utils/apiConfig";
 import { FaStar, FaHeart, FaRegHeart } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
@@ -25,7 +26,7 @@ const cacheUtils = {
    * @param {string} identifier - Unique identifier for the data
    * @returns {string} Cache key
    */
-  getCacheKey: (type, identifier) => `rawg_cache_${type}_${identifier}`,
+  getCacheKey: (type, identifier) => `rawg_cache_v4_${type}_${identifier}`, // v4 for enhanced publisher matching
 
   /**
    * Retrieve cached data from localStorage
@@ -39,8 +40,7 @@ const cacheUtils = {
       
       const { data } = JSON.parse(cached);
       return data;
-    } catch (error) {
-      console.warn('Cache read error:', error);
+    } catch {
       return null;
     }
   },
@@ -57,8 +57,8 @@ const cacheUtils = {
         timestamp: Date.now(), // Keep timestamp for reference
       };
       localStorage.setItem(key, JSON.stringify(cacheEntry));
-    } catch (error) {
-      console.warn('Cache write error:', error);
+    } catch {
+      // Silently handle cache write errors
     }
   },
 };
@@ -447,7 +447,7 @@ const FranchisePage = () => {
     setGameAsCurrentGame,
     setGameAsNextGame,
     setGameAsFinishedGame,
-    removeGameFromCategory
+    removeGameFromCategory,
   } = useCards();
   const inputRef = useRef(null);
 
@@ -459,7 +459,7 @@ const FranchisePage = () => {
     if (!localCard?.id) return;
     const saved = localStorage.getItem(`rating-${localCard.id}`);
     setLocalRating(saved ?? "0");
-  }, [localCard?.text, localCard?.isFranchiseCard, reloadKey]);
+  }, [localCard?.id, localCard?.text, localCard?.isFranchiseCard, reloadKey]);
 
   const updateRating = (value) => {
     if (!localCard?.id) return;
@@ -475,37 +475,11 @@ const FranchisePage = () => {
       Math.min(10, parseFloat(e.target.value) || 0)
     ).toString();
     
-    const numericValue = parseFloat(value);
-    const previousRating = parseFloat(localRating);
-    
-    
     setLocalRating(value);
     updateRating(value);
     
   };
 
-  // Helper function to remove all individual games from this franchise from ranking
-  const removeIndividualGamesFromRanking = () => {
-    if (!franchiseGames) return;
-    
-    franchiseGames.forEach(game => {
-      const gameCard = cards.find(c => c.text?.toLowerCase() === game.name.toLowerCase());
-      if (gameCard) {
-        const gameRating = localStorage.getItem(`rating-${gameCard.id}`);
-        if (getRatingValue(gameRating) > 0) {
-          localStorage.removeItem(`rating-${gameCard.id}`);
-          
-          // If this was a ranking-only card, remove it completely
-          // Otherwise, just reset the rating
-          if (gameCard.isRankingOnly) {
-            setCards(prev => prev.filter(c => c.id !== gameCard.id));
-          } else {
-            setCards(prev => prev.map(c => c.id === gameCard.id ? { ...c, rating: '0' } : c));
-          }
-        }
-      }
-    });
-  };
 
   // Helper function to get rating value from localStorage
   const getRatingValue = (ratingData) => {
@@ -725,7 +699,20 @@ const fetchGameData = async () => {
         setGameData(gameData);
         cacheUtils.setCachedData(cacheKey, gameData);
       } catch (err) {
-        console.error("Error loading game data:", err);
+        // If API limit reached, show basic fallback data
+        if (err?.message?.includes("monthly API limit") || err?.toString()?.includes("monthly API limit")) {
+          setGameData({
+            name: franchiseName,
+            image: "/fallback.jpg",
+            genres: "N/A (API limit reached)",
+            publishers: ["Unknown"],
+            publisherSlugs: [],
+            developers: ["Unknown"],
+            rating: "N/A",
+            headerIsExactGame: true,
+            headerIsFranchise: false,
+          });
+        }
       }
     };
 
@@ -733,21 +720,14 @@ const fetchGameData = async () => {
   }, [franchiseName, localCard?.isFranchiseCard, reloadKey]);
 
   useEffect(() => {
-    if (!gameData?.publisherSlugs?.length || !gameData?.publishers?.length)
-      return;
+    if (!franchiseName) return;
     setFranchiseGames(null);
 
 const fetchFranchiseGames = async () => {
       try {
-        const isGameCard = localCard?.isFranchiseCard === false;
-        const isFranchiseCard = localCard?.isFranchiseCard === true;
-        
-        let cacheKey, apiUrl;
-        
-        // Always use publisher-based search to get games from same franchise
-        const slugs = gameData.publisherSlugs.join(",");
-        cacheKey = cacheUtils.getCacheKey('franchiseGames', `${slugs}_${isFranchiseCard}`);
-        apiUrl = `https://api.rawg.io/api/games?publishers=${slugs}&page_size=40&key=${API_KEY}`;
+        // Use the card title directly for searching games
+        const searchQuery = franchiseName;
+        const cacheKey = cacheUtils.getCacheKey('franchiseGames', `search_${searchQuery}`);
         
         const cachedData = cacheUtils.getCachedData(cacheKey);
         if (cachedData) {
@@ -755,109 +735,376 @@ const fetchFranchiseGames = async () => {
           return;
         }
 
-        const res = await fetch(apiUrl);
-        const data = await res.json();
+        // Multiple search strategies to ensure comprehensive results
+        const allResults = new Map(); // Use Map to avoid duplicates
+        
+        // Strategy 1: Direct search with the franchise name
+        const searchUrl1 = `https://api.rawg.io/api/games?search=${encodeURIComponent(searchQuery)}&page_size=40&key=${API_KEY}`;
+        const res1 = await fetch(searchUrl1);
+        const data1 = await res1.json();
+        
+        data1.results?.forEach(game => {
+          if (game.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+            allResults.set(game.id, game);
+          }
+        });
+        
+        // Strategy 2: If we have gameData with publisher info, search by publisher names
+        if (gameData?.publishers?.length > 0) {
+          for (const publisher of gameData.publishers) {
+            try {
+              // Clean publisher name for search
+              const cleanPublisher = publisher.replace(/\s+(entertainment|games?|studios?|interactive|software|inc\.?|ltd\.?|corp\.?|corporation)$/i, '').trim();
+              if (cleanPublisher.length >= 3) {
+                const publisherSearchUrl = `https://api.rawg.io/api/games?search=${encodeURIComponent(cleanPublisher)}&page_size=40&key=${API_KEY}`;
+                const publisherRes = await fetch(publisherSearchUrl);
+                const publisherData = await publisherRes.json();
+                
+                publisherData.results?.forEach(game => {
+                  allResults.set(game.id, game);
+                });
+              }
+            } catch (e) {
+              console.warn(`Publisher search failed for ${publisher}:`, e);
+            }
+          }
+        }
+        
+        // Strategy 3: Search with query variations (shortened names, etc.)
+        const queryVariations = [];
+        const words = searchQuery.toLowerCase().split(' ');
+        
+        // Add first word if it's substantial
+        if (words[0] && words[0].length >= 4) {
+          queryVariations.push(words[0]);
+        }
+        
+        // Add combinations of first two words
+        if (words.length >= 2 && words[0].length >= 3 && words[1].length >= 3) {
+          queryVariations.push(`${words[0]} ${words[1]}`);
+        }
+        
+        for (const variation of queryVariations) {
+          try {
+            const variationUrl = `https://api.rawg.io/api/games?search=${encodeURIComponent(variation)}&page_size=20&key=${API_KEY}`;
+            const variationRes = await fetch(variationUrl);
+            const variationData = await variationRes.json();
+            
+            variationData.results?.forEach(game => {
+              allResults.set(game.id, game);
+            });
+          } catch (e) {
+            console.warn(`Variation search failed for ${variation}:`, e);
+          }
+        }
+        
+        const filteredResults = Array.from(allResults.values());
 
-        const normalize = (str) => str?.toLowerCase().trim();
-        const targetPublishers = gameData.publishers?.map(normalize) || [];
-
-        const filtered = await Promise.all(
-          data.results.map(async (game) => {
+        const gamesWithDetails = await Promise.all(
+          filteredResults.map(async (game) => {
             try {
               const detailRes = await fetch(
-                `https://api.rawg.io/api/games/${game.id}?key=${API_KEY}&add_stores=true`
+                `https://api.rawg.io/api/games/${game.id}?key=${API_KEY}`
               );
               const full = await detailRes.json();
               const stores = await fetchStoreLinks(game.id);
 
-              const normalize = (str) =>
-                str
-                  ?.toLowerCase()
-                  .replace(/[^a-z0-9\s]/g, "")
-                  .trim();
-
-              const romanToNumber = {
-                i: 1,
-                ii: 2,
-                iii: 3,
-                iv: 4,
-                v: 5,
-                vi: 6,
-                vii: 7,
-                viii: 8,
-                ix: 9,
-                x: 10,
-                xi: 11,
-                xii: 12,
+              return {
+                ...full,
+                stores: stores || [],
               };
-
-              const normalizeWord = (word) => {
-                const lower = word.toLowerCase();
-                return romanToNumber[lower]
-                  ? romanToNumber[lower].toString()
-                  : lower;
-              };
-
-              const getNormalizedWords = (text) =>
-                normalize(text).split(/\s+/).map(normalizeWord);
-
-              const gameDevNames =
-                full.developers?.map((d) => normalize(d.name)) || [];
-              const gamePubNames =
-                full.publishers?.map((p) => normalize(p.name)) || [];
-
-              const localText = localCard?.text?.toLowerCase().trim();
-              const localWords = getNormalizedWords(localText);
-              const gameWords = getNormalizedWords(game.name);
-
-              const exactNameMatch =
-                normalize(localText) === normalize(game.name);
-              const includesSubstring = normalize(game.name).includes(
-                normalize(localText)
-              );
-              const includesAllWords = localWords.every((word) =>
-                gameWords.includes(word)
-              );
-
-              let matches = false;
-              
-              if (isFranchiseCard) {
-                // Franchise mode: Show all games from same publisher/developer
-                matches = targetPublishers.some((targetPub) => {
-                  // Check if game's publishers/developers match
-                  return gameDevNames.some(gameDev => 
-                    gameDev.includes(targetPub) || targetPub.includes(gameDev)
-                  ) || gamePubNames.some(gamePub => 
-                    gamePub.includes(targetPub) || targetPub.includes(gamePub)
-                  );
-                });
-              } else {
-                // Game mode: Show only exact game name matches (and remove duplicates)
-                matches = exactNameMatch;
-              }
-
-              return matches
-                ? {
-                    ...full,
-                    stores: stores || [],
-                  }
-                : null;
             } catch {
-              return null;
+              return {
+                ...game,
+                stores: [],
+              };
             }
           })
         );
 
-        const filteredGames = filtered.filter(Boolean);
+// Advanced franchise name matching utilities
+        const createAdvancedMatcher = (searchQuery) => {
+          const normalizedQuery = searchQuery.toLowerCase().trim();
+          
+          // Roman numeral mappings
+          const romanToNumber = {
+            'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5',
+            'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10',
+            'xi': '11', 'xii': '12', 'xiii': '13', 'xiv': '14', 'xv': '15',
+            'xvi': '16', 'xvii': '17', 'xviii': '18', 'xix': '19', 'xx': '20'
+          };
+          
+          const numberToRoman = Object.fromEntries(
+            Object.entries(romanToNumber).map(([roman, num]) => [num, roman])
+          );
+          
+          // Create variations of the search query
+          const createQueryVariations = (query) => {
+            const variations = new Set([query]);
+            
+            // Add version with/without common suffixes
+            const suffixes = ['game', 'games', 'series', 'collection', 'franchise'];
+            suffixes.forEach(suffix => {
+              if (query.endsWith(' ' + suffix)) {
+                variations.add(query.replace(' ' + suffix, ''));
+              } else {
+                variations.add(query + ' ' + suffix);
+              }
+            });
+            
+            // Handle Roman numerals and numbers
+            const words = query.split(' ');
+            words.forEach((word, index) => {
+              // Convert Roman to number
+              if (romanToNumber[word]) {
+                const newWords = [...words];
+                newWords[index] = romanToNumber[word];
+                variations.add(newWords.join(' '));
+              }
+              
+              // Convert number to Roman
+              if (numberToRoman[word]) {
+                const newWords = [...words];
+                newWords[index] = numberToRoman[word];
+                variations.add(newWords.join(' '));
+              }
+              
+              // Handle ordinal numbers (1st, 2nd, 3rd, etc.)
+              const ordinalMatch = word.match(/^(\d+)(st|nd|rd|th)$/);
+              if (ordinalMatch) {
+                const number = ordinalMatch[1];
+                const newWords = [...words];
+                newWords[index] = number;
+                variations.add(newWords.join(' '));
+                
+                if (numberToRoman[number]) {
+                  newWords[index] = numberToRoman[number];
+                  variations.add(newWords.join(' '));
+                }
+              }
+            });
+            
+            // Handle colon separators (e.g., "Call of Duty: Modern Warfare" vs "Call of Duty Modern Warfare")
+            if (query.includes(':')) {
+              variations.add(query.replace(':', ''));
+              variations.add(query.replace(':', ' -'));
+            }
+            
+            // Handle ampersand variations
+            if (query.includes('&')) {
+              variations.add(query.replace('&', 'and'));
+            }
+            if (query.includes(' and ')) {
+              variations.add(query.replace(' and ', ' & '));
+            }
+            
+            return Array.from(variations);
+          };
+          
+          const queryVariations = createQueryVariations(normalizedQuery);
+          
+          return {
+            matchesGameName: (gameName, gamePublishers = [], gameDevelopers = []) => {
+              const normalizedGameName = gameName.toLowerCase().trim();
+              
+              // Direct substring match (original logic)
+              if (queryVariations.some(variation => normalizedGameName.includes(variation))) {
+                return { matches: true, confidence: 1.0, method: 'direct' };
+              }
+              
+              // Remove publisher names from game title for cleaner matching
+              const removePublisherFromTitle = (title, publishers, developers) => {
+                let cleanTitle = title;
+                [...publishers, ...developers].forEach(company => {
+                  const companyLower = company.toLowerCase();
+                  // Remove publisher name if it appears at start/end of title
+                  const patterns = [
+                    new RegExp(`^${companyLower}'?s?\\s+`, 'i'),
+                    new RegExp(`\\s+${companyLower}'?s?$`, 'i'),
+                    new RegExp(`^${companyLower}\\s*:`, 'i')
+                  ];
+                  patterns.forEach(pattern => {
+                    cleanTitle = cleanTitle.replace(pattern, ' ').trim();
+                  });
+                });
+                return cleanTitle;
+              };
+              
+              const cleanGameName = removePublisherFromTitle(normalizedGameName, gamePublishers, gameDevelopers);
+              
+              // Try matching with cleaned title
+              if (queryVariations.some(variation => cleanGameName.includes(variation))) {
+                return { matches: true, confidence: 0.9, method: 'cleaned' };
+              }
+              
+              // Fuzzy matching for partial words
+              const calculateSimilarity = (str1, str2) => {
+                const words1 = str1.split(/\s+/).filter(w => w.length > 2);
+                const words2 = str2.split(/\s+/).filter(w => w.length > 2);
+                
+                if (words1.length === 0 || words2.length === 0) return 0;
+                
+                let matchedWords = 0;
+                words1.forEach(word1 => {
+                  if (words2.some(word2 => 
+                    word2.includes(word1) || word1.includes(word2) ||
+                    (word1.length > 3 && word2.length > 3 && 
+                     (word1.startsWith(word2.substring(0, 3)) || word2.startsWith(word1.substring(0, 3))))
+                  )) {
+                    matchedWords++;
+                  }
+                });
+                
+                return matchedWords / Math.max(words1.length, words2.length);
+              };
+              
+              // Check similarity for each variation
+              let bestSimilarity = 0;
+              queryVariations.forEach(variation => {
+                const similarity = calculateSimilarity(variation, cleanGameName);
+                bestSimilarity = Math.max(bestSimilarity, similarity);
+              });
+              
+              if (bestSimilarity > 0.6) {
+                return { matches: true, confidence: bestSimilarity * 0.8, method: 'fuzzy' };
+              }
+              
+              return { matches: false, confidence: 0, method: 'none' };
+            },
+            
+            queryVariations
+          };
+        };
+        
+        const matcher = createAdvancedMatcher(searchQuery);
+        
+        // Enhanced filtering logic to include games with publisher/developer names in their titles
+        const filterGamesByPublisherDeveloper = (game) => {
+          const gamePublishers = game.publishers?.map(p => p.name.toLowerCase()) || [];
+          const gameDevelopers = game.developers?.map(d => d.name.toLowerCase()) || [];
+          const normalizedGameName = game.name.toLowerCase();
+          
+          // Check if game name contains any of its own publisher or developer names
+          const containsPublisherName = gamePublishers.some(pub => {
+            // Remove common suffixes like "entertainment", "games", "studios", etc.
+            const cleanPub = pub.replace(/\s+(entertainment|games?|studios?|interactive|software|inc\.?|ltd\.?|corp\.?|corporation)$/i, '').trim();
+            if (cleanPub.length < 3) return false; // Skip very short names
+            return normalizedGameName.includes(cleanPub);
+          });
+          
+          const containsDeveloperName = gameDevelopers.some(dev => {
+            // Remove common suffixes
+            const cleanDev = dev.replace(/\s+(entertainment|games?|studios?|interactive|software|inc\.?|ltd\.?|corp\.?|corporation)$/i, '').trim();
+            if (cleanDev.length < 3) return false; // Skip very short names
+            return normalizedGameName.includes(cleanDev);
+          });
+          
+          return containsPublisherName || containsDeveloperName;
+        };
+
+let filteredGames;
+
+        // Enhanced publisher matching function
+        const matchesPublisher = (gamePublishers, gameDevelopers, franchisePublishers) => {
+          // Normalize all names for comparison
+          const normalizeCompanyName = (name) => {
+            return name.toLowerCase()
+              .replace(/\s+(entertainment|games?|studios?|interactive|software|inc\.?|ltd\.?|corp\.?|corporation|llc)$/i, '')
+              .replace(/[^a-z0-9\s]/g, '')
+              .trim();
+          };
+          
+          const normalizedGamePublishers = gamePublishers.map(normalizeCompanyName);
+          const normalizedGameDevelopers = gameDevelopers.map(normalizeCompanyName);
+          const normalizedFranchisePublishers = franchisePublishers.map(normalizeCompanyName);
+          
+          // Check for exact matches first
+          for (const franchisePub of normalizedFranchisePublishers) {
+            if (normalizedGamePublishers.includes(franchisePub) || normalizedGameDevelopers.includes(franchisePub)) {
+              return true;
+            }
+          }
+          
+          // Check for partial matches (company name contains or is contained by franchise publisher)
+          for (const franchisePub of normalizedFranchisePublishers) {
+            if (franchisePub.length >= 3) {
+              for (const gamePub of [...normalizedGamePublishers, ...normalizedGameDevelopers]) {
+                if (gamePub.length >= 3) {
+                  // Check if names contain each other (bidirectional)
+                  if (franchisePub.includes(gamePub) || gamePub.includes(franchisePub)) {
+                    return true;
+                  }
+                  
+                  // Check for common abbreviations and variations
+                  const franchiseWords = franchisePub.split(' ').filter(w => w.length >= 3);
+                  const gameWords = gamePub.split(' ').filter(w => w.length >= 3);
+                  
+                  // If both have multiple words, check if significant words match
+                  if (franchiseWords.length >= 2 && gameWords.length >= 2) {
+                    const matchingWords = franchiseWords.filter(fw => 
+                      gameWords.some(gw => fw === gw || fw.includes(gw) || gw.includes(fw))
+                    );
+                    if (matchingWords.length >= Math.min(franchiseWords.length, gameWords.length) * 0.6) {
+                      return true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          return false;
+        };
+        
+        if (localCard?.isFranchiseCard) {
+          filteredGames = gamesWithDetails.filter(game => {
+            const gamePublishers = game.publishers?.map(p => p.name) || [];
+            const gameDevelopers = game.developers?.map(d => d.name) || [];
+            const franchisePublishers = gameData?.publishers || [];
+            
+            // Use enhanced publisher matching
+            const publisherMatch = matchesPublisher(gamePublishers, gameDevelopers, franchisePublishers);
+            
+            // Also check if game name contains the franchise name (fallback)
+            const gameNameMatch = matcher.matchesGameName(game.name, gamePublishers, gameDevelopers);
+            
+            return publisherMatch || gameNameMatch.matches;
+          });
+        } else {
+          filteredGames = gamesWithDetails.filter(game => {
+            const gamePublishers = game.publishers?.map(p => p.name) || [];
+            const gameDevelopers = game.developers?.map(d => d.name) || [];
+            
+            // Use the advanced matcher for name-based matching
+            const nameMatch = matcher.matchesGameName(game.name, gamePublishers, gameDevelopers);
+            
+            // Check if game name contains publisher/developer name
+            const containsPublisherDeveloper = filterGamesByPublisherDeveloper(game);
+            
+            // Also check if any game publisher/developer matches the search query
+            const publisherDeveloperQueryMatch = [...gamePublishers, ...gameDevelopers]
+              .some(company => {
+                const normalizedCompany = company.toLowerCase().replace(/\s+(entertainment|games?|studios?|interactive|software|inc\.?|ltd\.?|corp\.?|corporation)$/i, '').trim();
+                return normalizedCompany.includes(searchQuery.toLowerCase()) || 
+                       searchQuery.toLowerCase().includes(normalizedCompany);
+              });
+            
+            return nameMatch.matches || containsPublisherDeveloper || publisherDeveloperQueryMatch;
+          });
+        }
+
         setFranchiseGames(filteredGames);
         cacheUtils.setCachedData(cacheKey, filteredGames);
       } catch (err) {
-        console.error("Error fetching franchise games:", err);
+        // If API limit reached, show empty games list
+        if (err?.message?.includes("monthly API limit") || err?.toString()?.includes("monthly API limit")) {
+          setFranchiseGames([]);
+        }
       }
     };
 
     fetchFranchiseGames();
-  }, [gameData?.publisherSlugs, gameData?.publishers]);
+  }, [franchiseName, gameData]);
 
   const fetchStoreLinks = async (id) => {
     try {
@@ -892,13 +1139,11 @@ const fetchFranchiseGames = async () => {
     const handleWheel = (e) => {
       if (document.activeElement !== input) return;
       
-      
       e.preventDefault();
       const delta = Math.sign(e.deltaY);
       let newValue = Math.max(0, Math.min(10, parseFloat(localRating) - delta));
       
       const valueStr = newValue.toString();
-      const previousRating = parseFloat(localRating);
       
       setLocalRating(valueStr);
       updateRating(valueStr);
@@ -907,7 +1152,7 @@ const fetchFranchiseGames = async () => {
 
     input.addEventListener("wheel", handleWheel, { passive: false });
     return () => input.removeEventListener("wheel", handleWheel);
-  }, [localRating, localCard?.id, franchiseName, franchiseGames, cards]);
+  }, [localRating, localCard?.id, franchiseName, franchiseGames, cards, updateRating]);
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#131313] text-white relative px-4 sm:px-6 lg:px-8 pr-16 sm:pr-20 md:pr-24 lg:pr-28">
@@ -959,18 +1204,18 @@ const fetchFranchiseGames = async () => {
                     // Filter out games without store links
                     if (!game.stores || game.stores.length === 0) {
                       // Special case: Allow Minecraft even without store data since it has hardcoded link
-                      return game.name?.toLowerCase().includes('minecraft');
+                      return game.name?.toLowerCase() === 'minecraft';
                     }
                     // Check if game has any valid store links
-                    const hasValidStores = game.stores.some(store => {
-                      if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url) {
-                        return true;
-                      }
-                      if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url) {
-                        return true;
-                      }
-                      return false;
-                    });
+              const hasValidStores = game.stores.some(store => {
+                if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url?.startsWith('https://store.steampowered.com')) {
+                  return true;
+                }
+                if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url?.startsWith('https://')) {
+                  return true;
+                }
+                return false;
+              });
                     return hasValidStores;
                   })
                   .sort((a, b) => new Date(b.released) - new Date(a.released))
@@ -1092,32 +1337,23 @@ const fetchFranchiseGames = async () => {
         {franchiseGames === null ? (
           <ShimmerCardList count={4} />
         ) : franchiseGames.length === 0 ? (
-          <p className="text-center text-muted-foreground text-sm">
-            {localCard?.isFranchiseCard ? (
-              <>
-                No games found from{" "}
-                <strong>{gameData.publishers?.join(", ")}</strong>.
-              </>
-            ) : (
-              <>
-                No games found with the name <strong>{localCard?.text}</strong>.
-              </>
-            )}
-          </p>
+          <div className="text-center py-8">
+            <p className="text-gray-400">No games found in this collection.</p>
+          </div>
         ) : (
           franchiseGames
             .filter((game) => {
               // Filter out games without store links
               if (!game.stores || game.stores.length === 0) {
                 // Special case: Allow Minecraft even without store data since it has hardcoded link
-                return game.name?.toLowerCase().includes('minecraft');
+                return game.name?.toLowerCase() === 'minecraft';
               }
               // Check if game has any valid store links
               const hasValidStores = game.stores.some(store => {
-                if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url) {
+                if ((store.store?.name === 'Steam' || store.store_id === 1) && store.url?.startsWith('https://store.steampowered.com')) {
                   return true;
                 }
-                if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url) {
+                if ((store.store?.name === 'Epic Games' || store.store_id === 11) && store.url?.startsWith('https://')) {
                   return true;
                 }
                 return false;

@@ -19,7 +19,6 @@ const CardComponent = ({
   card,
   draggable,
   onDragStart,
-  onDragOver,
   onDragEnd,
   isDragging,
   showClearButton = false,
@@ -86,7 +85,7 @@ const CardComponent = ({
     reader.readAsDataURL(file);
     
     return true;
-  }, []);
+  }, [ACCEPTED_FILE_TYPES, MAX_FILE_SIZE]);
 
   /**
    * Handle file input change event
@@ -152,12 +151,6 @@ const CardComponent = ({
     }
   }, [onDragStart, id]);
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    if (onDragOver) {
-      onDragOver(e, id);
-    }
-  }, [onDragOver, id]);
 
   const handleDragEnd = useCallback((e) => {
     if (onDragEnd) {

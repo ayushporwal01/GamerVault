@@ -32,6 +32,7 @@ export const CardProvider = ({ children }) => {
   const [rankedGames, setRankedGames] = useState([]);
   const [searchInput, setSearchInput] = useState("");
   const [draggedGame, setDraggedGame] = useState(null);
+  const [showGames, setShowGames] = useState(true);
 
   /**
    * Load cards and category arrays from localStorage on component mount
@@ -179,15 +180,20 @@ export const CardProvider = ({ children }) => {
 
   /**
    * Creates and adds a new card with default values
+   * Sets isFranchiseCard based on current showGames toggle state
    */
   const addCard = useCallback(() => {
     const newCard = {
       id: Date.now(),
       text: "Title",
       image: null,
+      // Set card type based on current toggle state
+      // If showGames is true (showing games), create a game card (isFranchiseCard: false/undefined)
+      // If showGames is false (showing franchises), create a franchise card (isFranchiseCard: true)
+      isFranchiseCard: !showGames,
     };
     setCards((prev) => [...prev, newCard]);
-  }, []);
+  }, [showGames]);
 
   /**
    * Removes a card by its ID
@@ -223,12 +229,6 @@ export const CardProvider = ({ children }) => {
     }
   }, []);
 
-  /**
-   * Clear only ranking-only cards (used when clearing rankings)
-   */
-  const clearRankingOnlyCards = useCallback(() => {
-    setCards(prev => prev.filter(card => !card.isRankingOnly));
-  }, []);
 
   /**
    * Helper function to find a card by ID
@@ -240,23 +240,6 @@ export const CardProvider = ({ children }) => {
   }, [cards]);
 
 
-  /**
-   * Creates a deep copy of a card using pass-by-value concept
-   * Ensures complete independence between original and copy
-   * @param {Object} card - The original card object
-   * @returns {Object} - A completely independent copy
-   */
-  const createCardCopy = useCallback((card) => {
-    // Deep clone using JSON methods (pass-by-value)
-    // This ensures no references are shared between original and copy
-    return JSON.parse(JSON.stringify({
-      ...card,
-      // Add a timestamp to make it unique (optional)
-      copiedAt: new Date().toISOString(),
-      // Keep the original ID to maintain relationships
-      originalId: card.id
-    }));
-  }, []);
 
   /**
    * Persist favoriteGames to localStorage
@@ -539,11 +522,13 @@ export const CardProvider = ({ children }) => {
       rankedGames,
       searchInput,
       draggedGame,
+      showGames,
       
       // Essential setters
       setCards,
       setSearchInput,
       setDraggedGame,
+      setShowGames,
       
       // Actions
       addCard,
@@ -581,7 +566,7 @@ export const CardProvider = ({ children }) => {
       reorderFinishedGames,
       reorderFavoriteGames,
     }),
-    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, removeGameFromAllCategories]
+    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, showGames, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames]
   );
 
   return (
