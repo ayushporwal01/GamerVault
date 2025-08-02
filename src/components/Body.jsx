@@ -67,13 +67,37 @@ const Body = () => {
       // Show all filtered cards when no search input
       setFilteredCardIds(homepageCards.map((card) => card.id));
     } else {
-      // Filter cards by title (case-insensitive)
+      // Filter cards by title and publisher (case-insensitive)
+      // Handle edge cases where publisher names might be partial matches
+      const searchTerm = debouncedSearchInput.toLowerCase();
       const filtered = homepageCards
-        .filter((card) =>
-          (card.text || "")
+        .filter((card) => {
+          // Check if title matches
+          const titleMatch = (card.text || "")
             .toLowerCase()
-            .includes(debouncedSearchInput.toLowerCase())
-        )
+            .includes(searchTerm);
+          
+          // Check if any publisher matches (handles partial matches at start, end, or anywhere)
+          const publisherMatch = card.publishers && Array.isArray(card.publishers) 
+            ? card.publishers.some(publisher => 
+                (publisher || "")
+                  .toLowerCase()
+                  .includes(searchTerm)
+              )
+            : false;
+          
+          // Check if any developer matches (additional search criteria)
+          const developerMatch = card.developers && Array.isArray(card.developers)
+            ? card.developers.some(developer => 
+                (developer || "")
+                  .toLowerCase()
+                  .includes(searchTerm)
+              )
+            : false;
+          
+          // Return true if any field matches
+          return titleMatch || publisherMatch || developerMatch;
+        })
         .map((card) => card.id);
       setFilteredCardIds(filtered);
     }
