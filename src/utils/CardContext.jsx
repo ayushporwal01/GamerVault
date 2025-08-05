@@ -32,6 +32,7 @@ export const CardProvider = ({ children }) => {
   const [rankedGames, setRankedGames] = useState([]);
   const [searchInput, setSearchInput] = useState("");
   const [draggedGame, setDraggedGame] = useState(null);
+  const [isFranchiseView, setIsFranchiseView] = useState(false);
 
   /**
    * Load cards and category arrays from localStorage on component mount
@@ -179,49 +180,82 @@ export const CardProvider = ({ children }) => {
 
   /**
    * Creates and adds a new card with default values
+   * Cards are view-specific based on current franchise view state
    */
   const addCard = useCallback(() => {
     const newCard = {
       id: Date.now(),
       text: "Title",
       image: null,
+      isFranchiseCard: isFranchiseView, // Set based on current view
     };
     setCards((prev) => [...prev, newCard]);
+  }, [isFranchiseView]);
+
+  /**
+   * Helper function to clean up all localStorage data related to a card
+   * @param {number} id - The ID of the card to clean up
+   */
+  const cleanupCardLocalStorage = useCallback((id) => {
+    // Remove all possible localStorage entries for this card
+    localStorage.removeItem(`rating-${id}`);
+    localStorage.removeItem(`franchise-genre-${id}`);
+    localStorage.removeItem(`franchise-publisher-${id}`);
+    localStorage.removeItem(`franchise_data_${id}`);
   }, []);
 
   /**
-   * Removes a card by its ID
+   * Removes a card by its ID and cleans up all related localStorage data
    * @param {number} id - The ID of the card to remove
    */
   const removeCard = useCallback((id) => {
     setCards((prev) => prev.filter((card) => card.id !== id));
     // Also remove from all categories when main card is deleted
     removeCardFromAllCategories(id);
-    // Also clean up any rating data for this card
-    localStorage.removeItem(`rating-${id}`);
-  }, [removeCardFromAllCategories]);
+    // Clean up all localStorage data for this card
+    cleanupCardLocalStorage(id);
+  }, [removeCardFromAllCategories, cleanupCardLocalStorage]);
 
   /**
-   * Clears all cards and related localStorage entries
-   * Includes cleanup of legacy storage keys
+   * Clears cards from the current view only and related localStorage entries
+   * View-specific: only clears franchise cards when in franchise view, game cards when in games view
    */
   const clearAllCards = useCallback(() => {
-    setCards([]);
-    localStorage.removeItem("cards");
+    // Get cards to be removed (current view only)
+    const cardsToRemove = cards.filter(card => {
+      if (card.isRankingOnly) return false; // Don't clear ranking-only cards
+      // Clear franchise cards when in franchise view, game cards when in games view
+      return isFranchiseView ? card.isFranchiseCard : !card.isFranchiseCard;
+    });
 
-    // Clean up legacy storage entries
+    // Remove cards from current view only
+    setCards(prev => prev.filter(card => {
+      if (card.isRankingOnly) return true; // Keep ranking-only cards
+      // Keep cards from the opposite view
+      return isFranchiseView ? !card.isFranchiseCard : card.isFranchiseCard;
+    }));
+
+    // Clean up localStorage entries for removed cards
+    cardsToRemove.forEach(card => {
+      cleanupCardLocalStorage(card.id);
+    });
+
+    // Clean up legacy storage entries only for removed cards
     try {
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith("card-") || 
             key.startsWith("image-") || 
             key.startsWith("rating-")) {
-          localStorage.removeItem(key);
+          const cardId = key.split('-')[1];
+          if (cardsToRemove.some(card => card.id.toString() === cardId)) {
+            localStorage.removeItem(key);
+          }
         }
       });
     } catch (error) {
       console.error("Error cleaning up localStorage:", error);
     }
-  }, []);
+  }, [cards, isFranchiseView, cleanupCardLocalStorage]);
 
   /**
    * Clear only ranking-only cards (used when clearing rankings)
@@ -539,11 +573,13 @@ export const CardProvider = ({ children }) => {
       rankedGames,
       searchInput,
       draggedGame,
+      isFranchiseView,
       
       // Essential setters
       setCards,
       setSearchInput,
       setDraggedGame,
+      setIsFranchiseView,
       
       // Actions
       addCard,
@@ -581,7 +617,7 @@ export const CardProvider = ({ children }) => {
       reorderFinishedGames,
       reorderFavoriteGames,
     }),
-    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, removeGameFromAllCategories]
+    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, isFranchiseView, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, removeGameFromAllCategories]
   );
 
   return (

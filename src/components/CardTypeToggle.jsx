@@ -36,7 +36,7 @@ const CardTypeToggle = ({ card, setCards, setReloadKey }) => {
       {/* Left Toggle Arrow */}
       <button
         onClick={toggleType}
-        className="text-2xl text-white hover:text-blue-400 cursor-pointer transition-colors duration-200"
+        className="text-2xl text-white hover:text-green-400 cursor-pointer transition-colors duration-200"
         aria-label="Toggle card type"
       >
         &#8249; {/* Left single angle quotation mark */}
@@ -59,7 +59,7 @@ const CardTypeToggle = ({ card, setCards, setReloadKey }) => {
       {/* Right Toggle Arrow */}
       <button
         onClick={toggleType}
-        className="text-2xl text-white hover:text-blue-400 cursor-pointer transition-colors duration-200"
+        className="text-2xl text-white hover:text-green-400 cursor-pointer transition-colors duration-200"
         aria-label="Toggle card type"
       >
         &#8250; {/* Right single angle quotation mark */}

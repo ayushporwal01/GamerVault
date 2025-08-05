@@ -9,7 +9,7 @@ import useDebounce from "../utils/useDebounce";
  * Features search filtering, smooth animations, and responsive layout
  */
 const Body = () => {
-  const { cards, setCards, searchInput } = useCards();
+  const { cards, setCards, searchInput, isFranchiseView } = useCards();
   const [draggingId, setDraggingId] = useState(null);
   const [filteredCardIds, setFilteredCardIds] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -51,7 +51,12 @@ const Body = () => {
    */
   useEffect(() => {
     // Filter to only include cards that should appear on homepage (not ranking-only)
-    const homepageCards = cards.filter(card => !card.isRankingOnly);
+    // Also filter based on global view mode
+    const homepageCards = cards.filter(card => {
+      if (card.isRankingOnly) return false;
+      // Show franchise cards when in franchise view, game cards when in games view
+      return isFranchiseView ? card.isFranchiseCard : !card.isFranchiseCard;
+    });
     
     if (!debouncedSearchInput.trim()) {
       // Show all homepage cards when no search input
@@ -67,7 +72,7 @@ const Body = () => {
         .map((card) => card.id);
       setFilteredCardIds(filtered);
     }
-  }, [debouncedSearchInput, cards]);
+  }, [debouncedSearchInput, cards, isFranchiseView]);
 
   /**
    * Handle drag start event
@@ -115,7 +120,7 @@ const Body = () => {
   /**
    * Handle drop event for reordering cards
    */
-  const handleDrop = useCallback((e, overId) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -164,7 +169,7 @@ const Body = () => {
                     : ''
                 }`}
                 onDragOver={(e) => handleDragOver(e, card.id)}
-                onDrop={(e) => handleDrop(e, card.id)}
+                onDrop={(e) => handleDrop(e)}
               >
                 <CardComponent
                   card={card}

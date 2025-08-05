@@ -63,6 +63,71 @@ const cacheUtils = {
   },
 };
 
+/**
+ * Franchise data management utilities
+ * Provides grouped storage for franchise page data (genre, publisher, rating)
+ */
+const franchiseDataUtils = {
+  /**
+   * Get franchise data from localStorage
+   * @param {number} franchiseId - The franchise card ID
+   * @returns {Object|null} Franchise data object or null
+   */
+  getFranchiseData: (franchiseId) => {
+    try {
+      const key = `franchise_data_${franchiseId}`;
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.warn('Franchise data read error:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Set franchise data in localStorage
+   * @param {number} franchiseId - The franchise card ID
+   * @param {Object} data - Franchise data to store
+   */
+  setFranchiseData: (franchiseId, data) => {
+    try {
+      const key = `franchise_data_${franchiseId}`;
+      const franchiseData = {
+        ...data,
+        lastUpdated: Date.now()
+      };
+      localStorage.setItem(key, JSON.stringify(franchiseData));
+    } catch (error) {
+      console.warn('Franchise data write error:', error);
+    }
+  },
+
+  /**
+   * Update a specific field in franchise data
+   * @param {number} franchiseId - The franchise card ID
+   * @param {string} field - The field to update
+   * @param {any} value - The new value
+   */
+  updateFranchiseField: (franchiseId, field, value) => {
+    const currentData = franchiseDataUtils.getFranchiseData(franchiseId) || {};
+    const newData = { ...currentData, [field]: value };
+    franchiseDataUtils.setFranchiseData(franchiseId, newData);
+  },
+
+  /**
+   * Remove franchise data from localStorage
+   * @param {number} franchiseId - The franchise card ID
+   */
+  removeFranchiseData: (franchiseId) => {
+    try {
+      const key = `franchise_data_${franchiseId}`;
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn('Franchise data removal error:', error);
+    }
+  }
+};
+
 // Animated Icon Components
 const AnimatedHeart = ({ isActive, onClick, title }) => {
   return (
@@ -420,6 +485,8 @@ const FranchisePage = () => {
   const [franchiseGames, setFranchiseGames] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [showGameModal, setShowGameModal] = useState(false);
+  const [localGenre, setLocalGenre] = useState("Empty");
+  const [localPublisher, setLocalPublisher] = useState("Empty");
 
   // Hide body scrollbar when modal is open
   useEffect(() => {
@@ -457,12 +524,46 @@ const FranchisePage = () => {
 
   useEffect(() => {
     if (!localCard?.id) return;
-    const saved = localStorage.getItem(`rating-${localCard.id}`);
-    setLocalRating(saved ?? "0");
+    
+    // Load grouped franchise data
+    const franchiseData = franchiseDataUtils.getFranchiseData(localCard.id);
+    
+    if (franchiseData) {
+      setLocalRating(franchiseData.rating ?? "0");
+      setLocalGenre(franchiseData.genre ?? "Empty");
+      setLocalPublisher(franchiseData.publisher ?? "Empty");
+    } else {
+      // Fallback to old localStorage format for backward compatibility
+      const saved = localStorage.getItem(`rating-${localCard.id}`);
+      const savedGenre = localStorage.getItem(`franchise-genre-${localCard.id}`);
+      const savedPublisher = localStorage.getItem(`franchise-publisher-${localCard.id}`);
+      
+      setLocalRating(saved ?? "0");
+      setLocalGenre(savedGenre ?? "Empty");
+      setLocalPublisher(savedPublisher ?? "Empty");
+      
+      // If we found old data, migrate it to the new format
+      if (saved || savedGenre || savedPublisher) {
+        const migratedData = {
+          rating: saved ?? "0",
+          genre: savedGenre ?? "Empty",
+          publisher: savedPublisher ?? "Empty"
+        };
+        franchiseDataUtils.setFranchiseData(localCard.id, migratedData);
+        
+        // Clean up old localStorage entries
+        if (saved) localStorage.removeItem(`rating-${localCard.id}`);
+        if (savedGenre) localStorage.removeItem(`franchise-genre-${localCard.id}`);
+        if (savedPublisher) localStorage.removeItem(`franchise-publisher-${localCard.id}`);
+      }
+    }
   }, [localCard?.text, localCard?.isFranchiseCard, reloadKey]);
 
   const updateRating = (value) => {
     if (!localCard?.id) return;
+    // Update using grouped franchise data
+    franchiseDataUtils.updateFranchiseField(localCard.id, 'rating', value);
+    // Also update old localStorage format for compatibility with ranking system
     localStorage.setItem(`rating-${localCard.id}`, value);
     setCards((prev) =>
       prev.map((c) => (c.id === localCard.id ? { ...c, rating: value } : c))
@@ -1050,11 +1151,23 @@ const fetchFranchiseGames = async () => {
             <div className="flex flex-col space-y-2 sm:space-y-3 text-sm sm:text-base md:text-lg lg:text-xl">
               <h3 className="break-words">
                 <span className="text-[#606e82]">Genre: </span>
-                {gameData?.genres || "Loading..."}
+                <input
+                  type="text"
+                  value={localGenre}
+                  onChange={(e) => setLocalGenre(e.target.value)}
+                  onBlur={() => localStorage.setItem(`franchise-genre-${localCard?.id}`, localGenre)}
+                  className="bg-transparent focus:outline-none"
+                />
               </h3>
               <h3 className="break-words">
                 <span className="text-[#606e82]">Publisher: </span>
-                {gameData?.publishers?.join(", ") || "Loading..."}
+                <input
+                  type="text"
+                  value={localPublisher}
+                  onChange={(e) => setLocalPublisher(e.target.value)}
+                  onBlur={() => localStorage.setItem(`franchise-publisher-${localCard?.id}`, localPublisher)}
+                  className="bg-transparent focus:outline-none"
+                />
               </h3>
               <h3>
                 <span className="text-[#606e82]">Rating: </span>

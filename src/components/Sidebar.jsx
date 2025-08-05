@@ -19,9 +19,18 @@ const Sidebar = () => {
     setGameAsNextGame,
     setGameAsFinishedGame,
     addToFavorites,
+    isFranchiseView,
   } = useCards();
   const navigate = useNavigate();
   const [dragOverButton, setDragOverButton] = useState(null);
+  // Handle clear all cards with confirmation alert
+  const handleClearAllCards = () => {
+    const confirmed = window.confirm("Are you sure you want to clear all games from current view?");
+    
+    if (confirmed) {
+      clearAllCards();
+    }
+  };
 
   // Handle drag over events - only respond to game drags, not card drags
   const handleDragOver = useCallback(
@@ -76,7 +85,7 @@ const Sidebar = () => {
     },
     {
       icon: <MdDelete />,
-      onClick: clearAllCards,
+      onClick: handleClearAllCards,
       ariaLabel: "Clear all cards",
       size: "text-lg sm:text-xl",
       isActionButton: true,
@@ -184,6 +193,7 @@ const Sidebar = () => {
           </ul>
         </div>
       </div>
+
     </>
   );
 };
