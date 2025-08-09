@@ -44,7 +44,7 @@ const GameCard = ({
       onDrop={(e) => onDrop(e, game.id)}
     >
       <div 
-        className={`relative w-full bg-[#1e1e1e]/50 rounded-xl overflow-hidden backdrop-blur-md border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 flex justify-between items-center ${theme.cardBg || ''}`}
+        className={`flex flex-row items-center w-full max-w-2xl min-h-24 bg-[#1e1e1e]/60 rounded-xl overflow-hidden backdrop-blur-md border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 my-2 ${theme.cardBg || ''}`}
         draggable
         onDragStart={(e) => onDragStart(e, game.id)}
         onDragEnd={onDragEnd}
@@ -60,58 +60,44 @@ const GameCard = ({
           <FaTimes className="text-sm" />
         </motion.button>
 
-        {/* Game Image */}
-        <div className="relative w-full h-48 overflow-hidden">
+        {/* Game Image on the left */}
+        <div className="w-20 h-20 flex-shrink-0 relative ml-4 my-2">
           <motion.img
             src={game.image || "/fallback.jpg"}
             onError={(e) => (e.target.src = "/fallback.jpg")}
             alt={game.name}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105 rounded-lg"
             whileHover={{ filter: "brightness(1.1)" }}
           />
-          
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </div>
 
-        {/* Game Title Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/90 to-transparent">
+        {/* Game Title and Status on the right */}
+        <div className="flex-1 flex flex-col justify-center px-6 py-2">
           <motion.h3
-            className="text-white font-semibold text-base sm:text-lg leading-tight drop-shadow-lg"
+            className="text-white font-semibold text-lg leading-tight drop-shadow-lg"
             initial={{ opacity: 0.8 }}
             whileHover={{ opacity: 1 }}
           >
             {game.name}
           </motion.h3>
-          
-        {/* Status indicator */}
+          {/* Status indicator */}
           <motion.div
-            className="flex items-center gap-1 sm:gap-2"
+            className="flex items-center gap-2 mt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <theme.statusIcon className={`text-xs sm:text-sm ${theme.iconColor}`} />
+            {theme.statusIcon && <theme.statusIcon className={`text-sm ${theme.iconColor}`} />}
             <span className="text-xs text-gray-300">{theme.statusText}</span>
           </motion.div>
-          
-          {/* Icons */}
-          <div className="flex flex-col items-end gap-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center">
-                <theme.icon className={`text-white text-xs`} />
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Hover effect border */}
-        <div className={`absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-${theme.borderColor}/30 transition-colors duration-300 pointer-events-none`}></div>
-        
+        <div className={`absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-${theme.borderColor}/30 transition-colors duration-300 pointer-events-none`}></div>
         {/* Glow effect */}
-        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-          <div className={`absolute inset-0 rounded-xl bg-gradient-to-r ${theme.glowGradient} blur-sm`}></div>
+        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${theme.glowGradient} blur-sm`}></div>
         </div>
       </div>
     </motion.div>

@@ -325,11 +325,13 @@ export const CardProvider = ({ children }) => {
     }
   }, []);
 
-  /**
-   * Adds a game to favorites
-   * @param {Object} game - The game object to add
-   */
+  // Add to favorites, but remove from current/next/finished first
   const addToFavorites = useCallback((game) => {
+    // Remove from other categories
+    removeGameFromAllCategories(game.id);
+    setCurrentGames(prev => prev.filter(g => g.id !== game.id));
+    setNextGames(prev => prev.filter(g => g.id !== game.id));
+    setFinishedGames(prev => prev.filter(g => g.id !== game.id));
     setFavoriteGames(prev => {
       const exists = prev.some(g => g.id === game.id);
       if (!exists) {
@@ -337,7 +339,7 @@ export const CardProvider = ({ children }) => {
       }
       return prev;
     });
-  }, []);
+  }, [removeGameFromAllCategories]);
 
   /**
    * Removes a game from favorites
@@ -354,14 +356,10 @@ export const CardProvider = ({ children }) => {
     setFavoriteGames([]);
   }, []);
 
-  /**
-   * Adds a game to current games category
-   * @param {Object} game - The game object to add
-   */
+  // Add to current, but remove from next/finished/favorites first
   const setGameAsCurrentGame = useCallback((game) => {
-    // Remove from other categories first to ensure exclusivity
     removeGameFromAllCategories(game.id);
-    
+    setFavoriteGames(prev => prev.filter(g => g.id !== game.id));
     setCurrentGames(prev => {
       const exists = prev.some(g => g.id === game.id);
       if (!exists) {
@@ -371,14 +369,10 @@ export const CardProvider = ({ children }) => {
     });
   }, [removeGameFromAllCategories]);
 
-  /**
-   * Adds a game to next games category
-   * @param {Object} game - The game object to add
-   */
+  // Add to next, but remove from current/finished/favorites first
   const setGameAsNextGame = useCallback((game) => {
-    // Remove from other categories first to ensure exclusivity
     removeGameFromAllCategories(game.id);
-    
+    setFavoriteGames(prev => prev.filter(g => g.id !== game.id));
     setNextGames(prev => {
       const exists = prev.some(g => g.id === game.id);
       if (!exists) {
@@ -388,14 +382,10 @@ export const CardProvider = ({ children }) => {
     });
   }, [removeGameFromAllCategories]);
 
-  /**
-   * Adds a game to finished games category
-   * @param {Object} game - The game object to add
-   */
+  // Add to finished, but remove from current/next/favorites first
   const setGameAsFinishedGame = useCallback((game) => {
-    // Remove from other categories first to ensure exclusivity
     removeGameFromAllCategories(game.id);
-    
+    setFavoriteGames(prev => prev.filter(g => g.id !== game.id));
     setFinishedGames(prev => {
       const exists = prev.some(g => g.id === game.id);
       if (!exists) {
@@ -561,6 +551,56 @@ export const CardProvider = ({ children }) => {
     setFavoriteGames(newOrder);
   }, []);
 
+  /**
+   * Toggles a game in a category: if present, removes from all; if not, removes from all and adds to selected
+   * @param {Object} game - The game object
+   * @param {string} category - One of 'current', 'next', 'finished', 'favorites'
+   */
+  const toggleGameInCategory = useCallback((game, category) => {
+    let isAlreadyInCategory = false;
+    switch (category) {
+      case 'current':
+        isAlreadyInCategory = currentGames.some(g => g.id === game.id);
+        break;
+      case 'next':
+        isAlreadyInCategory = nextGames.some(g => g.id === game.id);
+        break;
+      case 'finished':
+        isAlreadyInCategory = finishedGames.some(g => g.id === game.id);
+        break;
+      case 'favorites':
+        isAlreadyInCategory = favoriteGames.some(g => g.id === game.id);
+        break;
+      default:
+        break;
+    }
+    if (isAlreadyInCategory) return;
+    // Remove from all categories using functional updates
+    setCurrentGames(prev => prev.filter(g => g.id !== game.id));
+    setNextGames(prev => prev.filter(g => g.id !== game.id));
+    setFinishedGames(prev => prev.filter(g => g.id !== game.id));
+    setFavoriteGames(prev => prev.filter(g => g.id !== game.id));
+    // Add to the selected category after removals
+    setTimeout(() => {
+      switch (category) {
+        case 'current':
+          setCurrentGames(prev => [...prev, { ...game, addedAt: new Date().toISOString() }]);
+          break;
+        case 'next':
+          setNextGames(prev => [...prev, { ...game, addedAt: new Date().toISOString() }]);
+          break;
+        case 'finished':
+          setFinishedGames(prev => [...prev, { ...game, addedAt: new Date().toISOString() }]);
+          break;
+        case 'favorites':
+          setFavoriteGames(prev => [...prev, game]);
+          break;
+        default:
+          break;
+      }
+    }, 0);
+  }, [currentGames, nextGames, finishedGames, favoriteGames]);
+
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(
     () => ({
@@ -616,8 +656,9 @@ export const CardProvider = ({ children }) => {
       reorderNextGames,
       reorderFinishedGames,
       reorderFavoriteGames,
+      toggleGameInCategory,
     }),
-    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, isFranchiseView, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, removeGameFromAllCategories]
+    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, isFranchiseView, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, toggleGameInCategory, removeGameFromAllCategories]
   );
 
   return (
