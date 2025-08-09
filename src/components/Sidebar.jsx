@@ -2,7 +2,7 @@ import { IoAddSharp, IoFlash } from "react-icons/io5";
 import { MdDelete } from "react-icons/md";
 import { FaTerminal, FaHeart, FaGamepad, FaStar, FaClock, FaTrophy } from "react-icons/fa6";
 import { IoMdCheckmark } from "react-icons/io";
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback } from "react";
 
@@ -19,7 +19,6 @@ const Sidebar = () => {
     setGameAsNextGame,
     setGameAsFinishedGame,
     addToFavorites,
-    isFranchiseView,
   } = useCards();
   const navigate = useNavigate();
   const [dragOverButton, setDragOverButton] = useState(null);

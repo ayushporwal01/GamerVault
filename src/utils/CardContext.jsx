@@ -4,7 +4,7 @@ import { createContext, useState, useEffect, useContext, useMemo, useCallback } 
  * Context for managing card state across the application
  * Handles card CRUD operations, search functionality, and localStorage persistence
  */
-const CardContext = createContext(null);
+
 
 /**
  * Custom hook for accessing card context
@@ -658,7 +658,7 @@ export const CardProvider = ({ children }) => {
       reorderFavoriteGames,
       toggleGameInCategory,
     }),
-    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, isFranchiseView, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, toggleGameInCategory, removeGameFromAllCategories]
+    [cards, currentGames, nextGames, finishedGames, favoriteGames, rankedGames, searchInput, draggedGame, isFranchiseView, addCard, removeCard, clearAllCards, removeFromCategory, setGameAsCurrentGame, setGameAsNextGame, setGameAsFinishedGame, removeGameFromCategory, addToFavorites, removeFromFavorites, clearFavorites, clearCurrentGames, clearNextGames, clearFinishedGames, addToRanking, removeFromRanking, reorderRanking, clearRanking, reorderCurrentGames, reorderNextGames, reorderFinishedGames, reorderFavoriteGames, toggleGameInCategory]
   );
 
   return (

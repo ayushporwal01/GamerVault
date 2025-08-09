@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { IoIosSearch, IoMdClose } from "react-icons/io";
 import { Link } from "react-router-dom";
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 import GradientToggle from "./GradientToggle";
 
 /**

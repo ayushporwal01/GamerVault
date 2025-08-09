@@ -66,7 +66,7 @@ const GameLinks = ({ game }) => {
     }
 
     return links;
-  }, [game.stores, game.name]);
+  }, [game.stores, game.name, storeConfig]);
 
   if (storeLinks.length === 0) {
     return (

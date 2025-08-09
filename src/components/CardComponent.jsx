@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { FiUpload } from "react-icons/fi";
 import { RxCross2 } from "react-icons/rx";
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 import { useNavigate } from "react-router-dom";
 
 /**
@@ -36,9 +36,7 @@ const CardComponent = ({
   // Generate unique input ID for file upload
   const inputId = useMemo(() => `file-upload-${id}`, [id]);
   
-  // File size limit configuration
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-  const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  
 
   /**
    * Sync local state changes back to the global context
@@ -152,12 +150,7 @@ const CardComponent = ({
     }
   }, [onDragStart, id]);
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    if (onDragOver) {
-      onDragOver(e, id);
-    }
-  }, [onDragOver, id]);
+  
 
   const handleDragEnd = useCallback((e) => {
     if (onDragEnd) {

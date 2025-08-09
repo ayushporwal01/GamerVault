@@ -1,4 +1,4 @@
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 import { FaCheckCircle, FaTrophy } from 'react-icons/fa';
 import GameCategoryPage from './GameCategoryPage';
 

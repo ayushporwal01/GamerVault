@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import * as motion from 'framer-motion';
 import { MdClear } from 'react-icons/md';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import EmptyState from './EmptyState';

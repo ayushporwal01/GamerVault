@@ -1,4 +1,4 @@
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 
 /**
  * Smooth purple-pink gradient toggle switch for franchise/games view

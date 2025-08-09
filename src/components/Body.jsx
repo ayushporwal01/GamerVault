@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useCards } from "../utils/CardContext";
+import { useCards } from "../utils/useCards";
 import CardComponent from "./CardComponent";
 import Sidebar from "./Sidebar";
 import useDebounce from "../utils/useDebounce";

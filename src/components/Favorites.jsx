@@ -1,5 +1,5 @@
 import { useCards } from '../utils/CardContext';
-import { motion } from 'framer-motion';
+import * as motion from 'framer-motion';
 import { FaHeart } from 'react-icons/fa';
 import { MdClear } from 'react-icons/md';
 import { useState, useRef, useCallback } from 'react';
@@ -53,7 +53,7 @@ const Favorites = () => {
   /**
    * Handle drop event
    */
-  const handleDrop = useCallback((e, overId) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     
